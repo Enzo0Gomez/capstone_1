@@ -1,10 +1,11 @@
 <?php
 include('../connect/connection.php');
-include 'session_login.php';
+
 // Add User
 if (isset($_POST['add_user'])) {
 
   $email = $_POST["email"];
+  $username = $_POST["username"];
   $password = $_POST["password"];
   $confirmpassword = $_POST["confirmpassword"];
   $usertype = $_POST['usertype'];
@@ -24,7 +25,7 @@ if (isset($_POST['add_user'])) {
       $password_hash = password_hash($password, PASSWORD_BCRYPT);
 
       // Insert into `user` table
-      $userQuery = "INSERT INTO user (email, password, status, user_type) VALUES ('$email', '$password_hash', '$status', '$usertype')";
+      $userQuery = "INSERT INTO user (email,username,password, status, user_type) VALUES ('$username','$email', '$password_hash', '$status', '$usertype')";
       if (mysqli_query($connect, $userQuery)) {
         echo "<script>alert('User added successfully!');</script>";
       } else {
@@ -43,6 +44,7 @@ if (isset($_POST['update_user'])) {
   include('../connect/connection.php'); // Ensure database connection
 
   $user_id = $_POST['user_id'];
+  $username = $_POST['username'];
   $email = $_POST['email'];
   $password = $_POST['password'];
   $usertype = $_POST['usertype'];
@@ -50,6 +52,7 @@ if (isset($_POST['update_user'])) {
 
   $sql = "UPDATE user SET 
               email = '$email',
+              username = '$username',
               user_type = '$usertype',
               status = '$status'";
 
@@ -78,8 +81,8 @@ if (isset($_POST['user_id'])) {
   $id = $_POST['user_id'];
 
   $sql_insert = "INSERT INTO archive_user
-                  (user_id, email, password, user_type, status)
-                  SELECT user_id, email, password, user_type, status
+                  (user_id, username, email, password, user_type, status)
+                  SELECT user_id, username, email, password, user_type, status
                   FROM user WHERE user_id = ?";
   $stmt_insert = $connect->prepare($sql_insert);
   $stmt_insert->bind_param("i", $id);
@@ -100,23 +103,59 @@ if (isset($_POST['user_id'])) {
 
 // Filter Logic
 $conditions = [];
-$email = isset($_POST['email']) ? $connect->real_escape_string($_POST['email']) : '';
+$username = isset($_POST['username']) ? $connect->real_escape_string($_POST['username']) : '';
 $user_type = isset($_POST['user_type']) ? $connect->real_escape_string($_POST['user_type']) : '';
 $status = isset($_POST['status']) ? $connect->real_escape_string($_POST['status']) : '';
 
-if (!empty($email)) {
-  $conditions[] = "email LIKE '%$email%'";
+if (!empty($username)) {
+  $conditions[] = "username LIKE ?";
 }
 if (!empty($user_type)) {
-  $conditions[] = "user_type = '$user_type'";
+  $conditions[] = "user_type = ?";
 }
 if (!empty($status)) {
-  $conditions[] = "status = '$status'";
+  $conditions[] = "status = ?";
 }
 
-$whereClause = count($conditions) > 0 ? "WHERE " . implode(" AND ", $conditions) : "";
+$whereClause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
 $sql = "SELECT * FROM user $whereClause";
-$result = $connect->query($sql);
+$stmt = $connect->prepare($sql);
+
+$bindParams = [];
+if (!empty($username))
+  $bindParams[] = "%$username%";
+if (!empty($user_type))
+  $bindParams[] = $user_type;
+if (!empty($status))
+  $bindParams[] = $status;
+
+if (!empty($bindParams)) {
+  $stmt->bind_param(str_repeat('s', count($bindParams)), ...$bindParams);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
+  if ($_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
+    $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
+    // Skip the header row
+    fgetcsv($file);
+
+    while (($data = fgetcsv($file, 1000, ",")) !== FALSE) {
+      $sql = "INSERT INTO user ( username, email, password,status,user_type) VALUES (?, ?, ?, ?, ?)";
+      $stmt = $pdo->prepare($sql);
+      $stmt->execute($data);
+    }
+
+    fclose($file);
+    echo "<script>alert('CSV data imported successfully!');</script>";
+    header("Location: usermanagement.php");
+  } else {
+    echo "<script>alert('Error uploading file.');</script>";
+  }
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -143,7 +182,7 @@ $result = $connect->query($sql);
 
 <body>
   <!-- Header -->
-  <header class="px-4 py-2 bg-pink-200 shadow-md flex justify-between items-center">
+  <header class="px-4 py-2 bg-gradient-to-r from-pink-300 to-pink-200 shadow-md flex justify-between items-center">
     <!-- Logo and Brand Name -->
     <a href="#" class="flex items-center space-x-2">
       <img src="../image/logo.png" alt="Logo" class="h-14 w-14 object-cover rounded-full">
@@ -165,25 +204,39 @@ $result = $connect->query($sql);
     <!-- Filter Section -->
     <form class="mb-6" id="filterForm" method="POST" action="usermanagement.php">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Add User Button -->
         <div class="text-start">
           <button
-            class="btn md:w-1/2 py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
+            class="btn w-45 md:w-auto py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
             data-bs-toggle="modal" data-bs-target="#userModal" type="button">Add User</button>
         </div>
+
+        <!-- Filter Dropdown -->
         <div class="text-end">
           <div class="relative">
             <button
-              class="btn py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
+              class="btn w-45 md:w-auto py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
+              data-bs-toggle="modal" data-bs-target="#csvModal" type="button">
+              Add Bulk
+            </button>
+            <button
+              class="btn w-full md:w-auto py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
               type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">Filter User</button>
-            <ul class="dropdown-menu absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg border border-gray-300"
+            <ul
+              class="dropdown-menu absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg border border-gray-300 z-10"
               aria-labelledby="dropdownMenuButton">
+              <!-- Username Filter -->
               <li class="p-2">
-                <input type="text" id="emailFilter" name="email" value="<?php echo htmlspecialchars($email); ?>"
-                  class="form-control p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
-                  placeholder="Search by Email...">
+                <input type="text" id="usernameFilter" name="username"
+                  value="<?php echo htmlspecialchars($username); ?>"
+                  class="form-control p-2 w-full rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="Search by Username...">
               </li>
+
+              <!-- User Type Filter -->
               <li class="p-2">
-                <select id="userTypeFilter" name="user_type" class="form-control p-2 rounded-md border-gray-300">
+                <select id="userTypeFilter" name="user_type"
+                  class="form-control p-2 w-full rounded-md border-gray-300 focus:outline-none">
                   <option value="" disabled <?php echo empty($user_type) ? 'selected' : ''; ?>>Select User Type</option>
                   <option value="Admin" <?php echo $user_type === 'Admin' ? 'selected' : ''; ?>>Admin</option>
                   <option value="Midwife" <?php echo $user_type === 'Midwife' ? 'selected' : ''; ?>>Midwife</option>
@@ -191,17 +244,24 @@ $result = $connect->query($sql);
                   <option value="Patient" <?php echo $user_type === 'Patient' ? 'selected' : ''; ?>>Patient</option>
                 </select>
               </li>
+
+              <!-- Status Filter -->
               <li class="p-2">
-                <select id="statusFilter" name="status" class="form-control p-2 rounded-md border-gray-300">
+                <select id="statusFilter" name="status"
+                  class="form-control p-2 w-full rounded-md border-gray-300 focus:outline-none">
                   <option value="" disabled <?php echo empty($status) ? 'selected' : ''; ?>>Select Status</option>
                   <option value="Active" <?php echo $status === 'Active' ? 'selected' : ''; ?>>Active</option>
                   <option value="Inactive" <?php echo $status === 'Inactive' ? 'selected' : ''; ?>>Inactive</option>
                 </select>
               </li>
-              <li class="p-2 text-end">
-                <button class="btn bg-pink-400 hover:bg-pink-500 text-white font-semibold rounded-lg shadow-md py-2"
+
+              <!-- Filter Buttons -->
+              <li class="p-2 text-end space-x-2">
+                <button
+                  class="btn bg-pink-400 hover:bg-pink-500 text-white font-semibold rounded-lg shadow-md py-2 w-full md:w-auto"
                   type="submit" name="filter">Apply Filters</button>
-                <button class="btn bg-gray-400 hover:bg-gray-500 text-white font-semibold rounded-lg shadow-md py-2"
+                <button
+                  class="btn bg-gray-400 hover:bg-gray-500 text-white font-semibold rounded-lg shadow-md py-2 w-full md:w-auto"
                   type="button" onclick="clearFilters()">Clear Filters</button>
               </li>
             </ul>
@@ -210,12 +270,14 @@ $result = $connect->query($sql);
       </div>
     </form>
 
+
     <!-- User Table -->
     <div class="overflow-x-auto">
       <table class="min-w-full table-auto bg-white shadow-lg rounded-lg border border-gray-200">
         <thead class="bg-pink-100 text-black text-sm">
           <tr>
             <th class="px-4 py-2 text-left">User ID</th>
+            <th class="px-4 py-2 text-left">Username</th>
             <th class="px-4 py-2 text-left">Email</th>
             <th class="px-4 py-2 text-left">User Type</th>
             <th class="px-4 py-2 text-left">Status</th>
@@ -226,21 +288,27 @@ $result = $connect->query($sql);
           <?php
           if ($result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
-              $email = addslashes($row['email']);
-              $user_type = addslashes($row['user_type']);
-              $status = addslashes($row['status']);
+              // Escape user data for HTML output
+              $user_id = htmlspecialchars($row['user_id']);
+              $username = htmlspecialchars($row['username']);
+              $email = htmlspecialchars($row['email']);
+              $user_type = htmlspecialchars($row['user_type']);
+              $status = htmlspecialchars($row['status']);
+
               echo "<tr class='border-b hover:bg-gray-50 transition-all duration-200'>";
-              echo "<td class='py-1 px-4 text-gray-700'>" . $row['user_id'] . "</td>";
-              echo "<td class='py-1 px-4 text-gray-700'>" . $row['email'] . "</td>";
-              echo "<td class='py-1 px-4 text-gray-700'>" . $row['user_type'] . "</td>";
-              echo "<td class='py-1 px-4 text-gray-700'>" . ucfirst($row['status']) . "</td>";
+              echo "<td class='py-1 px-4 text-gray-700'>{$user_id}</td>";
+              echo "<td class='py-1 px-4 text-gray-700'>{$username}</td>";
+              echo "<td class='py-1 px-4 text-gray-700'>{$email}</td>";
+              echo "<td class='py-1 px-4 text-gray-700'>{$user_type}</td>";
+              echo "<td class='py-1 px-4 text-gray-700'>" . ucfirst($status) . "</td>";
               echo '<td class="py-1 px-4 text-center">
           <div class="flex gap-2">
             <!-- Edit Button -->
             <button class="px-3 py-1 bg-pink-200 text-black text-sm rounded-md shadow hover:bg-pink-600 transition-all duration-200"
               data-bs-toggle="modal" data-bs-target="#editModal" 
               onclick="openEditModal({
-                id: \'' . $row['user_id'] . '\',
+                id: \'' . $user_id . '\',
+                username: \'' . $username . '\',
                 email: \'' . $email . '\',
                 usertype: \'' . $user_type . '\',
                 status: \'' . $status . '\'
@@ -249,7 +317,7 @@ $result = $connect->query($sql);
             </button>
             <!-- Archive Button -->
             <form action="usermanagement.php" method="POST">
-              <input type="hidden" id="archive" name="user_id" value="' . $row['user_id'] . '">
+              <input type="hidden" name="user_id" value="' . $user_id . '">
               <button type="submit" class="px-3 py-2 bg-pink-200 hover:bg-gray-500 text-black rounded-lg shadow-md flex items-center gap-2 transition-all duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-archive"
                    viewBox="0 0 16 16">
@@ -262,9 +330,10 @@ $result = $connect->query($sql);
               echo "</tr>";
             }
           } else {
-            echo "<tr><td colspan='5' class='py-3 px-4 text-center text-sm text-gray-700'>No users found</td></tr>";
+            echo "<tr><td colspan='6' class='py-3 px-4 text-center text-sm text-gray-700'>No users found</td></tr>";
           }
           ?>
+
         </tbody>
       </table>
     </div>
@@ -285,6 +354,13 @@ $result = $connect->query($sql);
           <div class="modal-body">
             <form id="addUserForm" method="POST">
               <!-- Email -->
+              <div class="row g-3">
+                <div class="col-md-12">
+                  <label for="user" class="form-label">Username</label>
+                  <input type="text" class="form-control" id="username" name="username" placeholder="Enter username"
+                    required>
+                </div>
+              </div>
               <div class="row g-3">
                 <div class="col-md-12">
                   <label for="email" class="form-label">Email</label>
@@ -343,7 +419,26 @@ $result = $connect->query($sql);
     </div>
 
 
-
+    <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="csvModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="csvModalLabel">Upload CSV File</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="csv_file" class="form-label">Select CSV File</label>
+                            <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv"
+                                required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
     <!-- Update User -->
@@ -360,6 +455,15 @@ $result = $connect->query($sql);
           <div class="modal-body">
             <form id="editUserForm" method="POST">
               <input type="hidden" id="edit-user-id" name="user_id"> <!-- Hidden field for user ID -->
+
+              <!-- Username -->
+              <div class="row g-3">
+                <div class="col-md-12">
+                  <label for="edit-username" class="form-label">Username</label>
+                  <input type="text" class="form-control" id="edit-username" name="username"
+                    placeholder="Enter username" required>
+                </div>
+              </div>
 
               <!-- Email -->
               <div class="row g-3">
@@ -450,11 +554,12 @@ $result = $connect->query($sql);
       function openEditModal(user) {
         // Populate the modal fields with the user's current data
         document.getElementById('edit-user-id').value = user.id; // User ID for the backend
+        document.getElementById('edit-username').value = user.username; // Pre-fill username
         document.getElementById('edit-email').value = user.email; // Pre-fill email
         document.getElementById('edit-usertype').value = user.usertype; // Pre-select usertype
         document.getElementById('edit-status').value = user.status; // Pre-select status
-
-      }</script>
+      }
+    </script>
 
     <script>
       function setUserId(userId) {
@@ -462,11 +567,12 @@ $result = $connect->query($sql);
       }
 
       function clearFilters() {
-        document.getElementById('emailFilter').value = '';
+        document.getElementById('usernameFilter').value = '';
         document.getElementById('userTypeFilter').selectedIndex = 0;
         document.getElementById('statusFilter').selectedIndex = 0;
         document.getElementById('filterForm').submit();
       }
+
     </script>
 </body>
 
