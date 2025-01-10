@@ -10,13 +10,11 @@
 
 <body>
     <style>
-          /* Vertical tabs styling */
-          .vertical-tabs {
+        /* Vertical tabs styling */
+        .vertical-tabs {
             display: flex;
             width: auto;
             min-height: 100vh;
-            background-color: #f4f4f4;
-            border-right: 1px solid #ddd;
         }
 
         .tab-link {
@@ -24,36 +22,63 @@
             align-items: center;
             justify-content: start;
             gap: 15px;
-            padding: 10px 20px;
             background-color: transparent;
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
             transition: background-color 0.3s ease, color 0.3s ease;
-            border-bottom: 1px solid #ddd;
         }
 
-        .tab-link:hover {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-
-        .tab-link.active {
-            background-color: #ddd;
-            color: #000;
-            font-weight: bold;
-        }
 
         .tab-link svg {
             flex-shrink: 0;
             /* Prevent the icon from shrinking */
+        }
+
+        .tab-menu {
+            width: 14em;
+            background-color: #FAD1E8;
+
+        }
+
+        .tab-menu button {
+            color: #000;
+            /* Light pink text */
+            padding: 0.5em;
+            transition: background 0.3s, color 0.3s;
+        }
+
+
+
+
+        @media (max-width: 768px) {
+            .tab-menu {
+                position: fixed;
+                left: -17em;
+                transition: left 0.3s ease;
+            }
+
+            .tab-menu.open {
+                left: 0;
+            }
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            padding: 2rem;
+            display: flex;
+        }
+
+        .tab-content>.content {
+            flex-grow: 1;
+            /* Makes the content stretch */
         }
     </style>
 
 
     <div class="vertical-tabs">
         <div class="tab-menu">
-            <a class="link" href="dashboard.php"><button class="tab-link p-3" onclick="showTab('dashboard')">
+            <a class="link" href="dashboard.php"><button class="tab-link p-3 active" data-tab="tab1" onclick="showTab('tab1')">
                     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1"
                         width="25" height="25" viewBox="0 0 256 256" xml:space="preserve">
                         <defs>
@@ -170,39 +195,41 @@
                 </ul>
             </div>
             <a href="../login-system/logout.php" 
-   class="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition text-center block">
-   Logout
-</a>
+                class="link"><button class="tab-link p-3"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-door-closed" viewBox="0 0 16 16">
+                <path d="M3 2a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v13h1.5a.5.5 0 0 1 0 1h-13a.5.5 0 0 1 0-1H3zm1 13h8V2H4z"/>
+                <path d="M9 9a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/>
+                </svg>Logout</button>
+            </a>
         </div>
 </body>
 <script>
-    function showTab(tabId) {
-        // Hide all tab content
-        const contents = document.querySelectorAll('.tab-content');
-        contents.forEach(content => {
-            content.style.display = 'none';
-        });
+   function showTab(tabId) {
+            // Hide all tab content
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => {
+                content.classList.add('hidden');
+            });
 
-        // Remove active class from all tab links
-        const tabs = document.querySelectorAll('.tab-link');
-        tabs.forEach(tab => {
-            tab.classList.remove('active');
-            tab.setAttribute('aria-selected', 'false');
-        });
+            // Remove active class from all tab links
+            const tabs = document.querySelectorAll('.tab-link');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
 
-        // Show the selected tab content
-        const selectedTabContent = document.getElementById(tabId);
-        if (selectedTabContent) {
-            selectedTabContent.style.display = 'block';
+            // Show the selected tab content
+            const selectedTabContent = document.getElementById(tabId);
+            if (selectedTabContent) {
+                selectedTabContent.classList.remove('hidden');
+            }
+
+            // Activate the selected tab link
+            const selectedTabLink = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+            if (selectedTabLink) {
+                selectedTabLink.classList.add('active');
+                selectedTabLink.setAttribute('aria-selected', 'true');
+            }
         }
-
-        // Activate the selected tab link
-        const selectedTabLink = document.querySelector(`.tab-link[onclick="showTab('${tabId}')"]`);
-        if (selectedTabLink) {
-            selectedTabLink.classList.add('active');
-            selectedTabLink.setAttribute('aria-selected', 'true');
-        }
-    }
 </script>
 
 </html>
