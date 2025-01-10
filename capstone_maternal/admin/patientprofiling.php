@@ -195,7 +195,7 @@ FROM patient WHERE patient_id = ?";
 <body>
 
     <!-- Header -->
-    <header class="px-4 py-2 bg-pink-200 shadow-md flex justify-between items-center">
+    <header class="px-4 py-2 bg-gradient-to-r from-pink-300 to-pink-200 shadow-md flex justify-between items-center">
         <!-- Logo and Brand Name -->
         <a href="#" class="flex items-center space-x-2">
             <img src="../image/logo.png" alt="Logo" class="h-14 w-14 object-cover rounded-full">
@@ -213,66 +213,68 @@ FROM patient WHERE patient_id = ?";
         <!-- Filter Section -->
         <form class="mb-8" role="search" method="POST" action="patientprofiling.php">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Add User Button -->
                 <button
-                    class="w-full py-2 bg-pink-300 hover:bg-pink-600 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
+                    class="btn w-25 md:w-1/1 py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
                     data-bs-toggle="modal" data-bs-target="#userModal" type="button">
                     Add User
                 </button>
-                <!-- Add Bulk Button -->
-                <button
-                    class="w-full py-2 bg-pink-300 hover:bg-pink-600 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
-                    data-bs-toggle="modal" data-bs-target="#csvModal" type="button">
-                    Add Bulk
-                </button>
-                <!-- Filter Dropdown -->
-                <div class="relative">
-                    <button
-                        class="w-full py-2 bg-pink-300 hover:bg-pink-600 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
-                        type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                        Filter Patient
-                    </button>
-                    <ul class="dropdown-menu absolute right-0 mt-2 w-full md:w-72 bg-white rounded-lg shadow-lg border border-gray-200"
-                        aria-labelledby="dropdownMenuButton">
-                        <li class="p-3">
-                            <input type="text" id="nameFilter" name="name"
-                                value="<?php echo htmlspecialchars($name); ?>"
-                                class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
-                                placeholder="Search by Name (First, Middle, Last)...">
-                        </li>
-                        <li class="p-3">
-                            <select id="statusFilter" name="status"
-                                class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400">
-                                <option value="" disabled <?php echo empty($status) ? 'selected' : ''; ?>>Select Status
-                                </option>
-                                <option value="Single" <?php echo $status === 'Single' ? 'selected' : ''; ?>>Single
-                                </option>
-                                <option value="Married" <?php echo $status === 'Married' ? 'selected' : ''; ?>>Married
-                                </option>
-                                <option value="Divorced" <?php echo $status === 'Divorced' ? 'selected' : ''; ?>>Divorced
-                                </option>
-                                <option value="Widowed" <?php echo $status === 'Widowed' ? 'selected' : ''; ?>>Widowed
-                                </option>
-                            </select>
-                        </li>
-                        <li class="p-3">
-                            <input type="number" id="ageFilter" name="age" value="<?php echo htmlspecialchars($age); ?>"
-                                class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
-                                placeholder="Filter by Age...">
-                        </li>
-                        <li class="p-3 flex justify-between">
-                            <button
-                                class="px-2 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg shadow-md"
-                                type="submit" name="filter">
-                                Apply Filters
-                            </button>
-                            <button
-                                class="px-2 py-2 bg-gray-400 hover:bg-gray-500 text-white font-semibold rounded-lg shadow-md"
-                                type="button" onclick="clearFilters()">
-                                Clear Filters
-                            </button>
-                        </li>
-                    </ul>
+                <div class="text-end">
+                    <div class="relative flex items-center">
+                        <button
+                            class="btn w-45 md:w-auto py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
+                            data-bs-toggle="modal" data-bs-target="#csvModal" type="button">
+                            Add Bulk
+                        </button>
+                        <button
+                            class="btn w-45 md:w-auto py-2 bg-pink-200 hover:bg-pink-500 text-black font-semibold rounded-lg shadow-md transition-all duration-300 ml-auto"
+                            type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            Filter Patient
+                        </button>
+                        <ul class="dropdown-menu absolute right-0 mt-2 w-full md:w-72 bg-white rounded-lg shadow-lg border border-gray-200"
+                            aria-labelledby="dropdownMenuButton">
+                            <li class="p-3">
+                                <input type="text" id="nameFilter" name="name"
+                                    value="<?php echo htmlspecialchars($name); ?>"
+                                    class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                                    placeholder="Search by Name (First, Middle, Last)...">
+                            </li>
+                            <li class="p-3">
+                                <select id="statusFilter" name="status"
+                                    class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400">
+                                    <option value="" disabled <?php echo empty($status) ? 'selected' : ''; ?>>Select
+                                        Status
+                                    </option>
+                                    <option value="Single" <?php echo $status === 'Single' ? 'selected' : ''; ?>>Single
+                                    </option>
+                                    <option value="Married" <?php echo $status === 'Married' ? 'selected' : ''; ?>>Married
+                                    </option>
+                                    <option value="Divorced" <?php echo $status === 'Divorced' ? 'selected' : ''; ?>>
+                                        Divorced
+                                    </option>
+                                    <option value="Widowed" <?php echo $status === 'Widowed' ? 'selected' : ''; ?>>Widowed
+                                    </option>
+                                </select>
+                            </li>
+                            <li class="p-3">
+                                <input type="number" id="ageFilter" name="age"
+                                    value="<?php echo htmlspecialchars($age); ?>"
+                                    class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                                    placeholder="Filter by Age...">
+                            </li>
+                            <li class="p-3 flex justify-between">
+                                <button
+                                    class="px-2 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg shadow-md"
+                                    type="submit" name="filter">
+                                    Apply Filters
+                                </button>
+                                <button
+                                    class="px-2 py-2 bg-gray-400 hover:bg-gray-500 text-white font-semibold rounded-lg shadow-md"
+                                    type="button" onclick="clearFilters()">
+                                    Clear Filters
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </form>
@@ -293,6 +295,7 @@ FROM patient WHERE patient_id = ?";
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php
+                    $showModal = false;
                     if ($result->num_rows > 0) {
                         // Start rendering the table rows
                         while ($row = $result->fetch_assoc()) {
@@ -303,8 +306,8 @@ FROM patient WHERE patient_id = ?";
                             $contact = $row['contact_no'];
                             $address = $row['home_address'];
                             $patient_id = $row['patient_id'];
-                            
-                        
+
+
                             // Check if patient health records exist
                             $queryHealthRecords = "SELECT * FROM patient_health_records WHERE patient_id = ?";
                             $stmtHealth = $connect->prepare($queryHealthRecords);
@@ -313,8 +316,8 @@ FROM patient WHERE patient_id = ?";
                             $healthRecordsResult = $stmtHealth->get_result();
                             $showModal = true;
 
-                              // Debugging output
-                              if (!$healthRecordsResult) {
+                            // Debugging output
+                            if (!$healthRecordsResult) {
                                 die("Error in query: " . $connect->error);
                             }
                             // Determine link behavior
@@ -326,7 +329,7 @@ FROM patient WHERE patient_id = ?";
                                 $patientHistoryLink = "<a class='block px-4 py-2 hover:bg-gray-100' href='#' data-bs-toggle='modal' data-bs-target='#patientHistoryModal'>Patient History</a>";
                             }
                             $stmtHealth->close();
-                    
+
                             echo "
                             <tr class='border-b'>
                                 <td class='px-4 py-2 text-gray-700'>$fullName</td>
@@ -376,8 +379,7 @@ FROM patient WHERE patient_id = ?";
                                 </td>
                             </tr>";
                         }
-                    }
-                    else {
+                    } else {
                         // If no records found
                         echo "<tr><td colspan='7' class='px-4 py-2 text-center text-gray-500'>No patient data available.</td></tr>";
                     }
@@ -473,6 +475,13 @@ FROM patient WHERE patient_id = ?";
                                     <label for="last_name">Last Name</label>
                                 </div>
                             </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="date" class="form-control" name="date_of_birth" id="date_of_birth"
+                                        placeholder="Date of Birth" required>
+                                    <label for="date_of_birth">Date of Birth</label>
+                                </div>
+                            </div>
                             <!-- Age -->
                             <div class="col-md-4">
                                 <div class="form-floating">
@@ -482,13 +491,7 @@ FROM patient WHERE patient_id = ?";
                                 </div>
                             </div>
                             <!-- Date of Birth -->
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="date" class="form-control" name="date_of_birth" id="date_of_birth"
-                                        placeholder="Date of Birth" required>
-                                    <label for="date_of_birth">Date of Birth</label>
-                                </div>
-                            </div>
+
                             <!-- Sex -->
                             <div class="col-md-4">
                                 <div class="form-floating">
@@ -755,8 +758,8 @@ FROM patient WHERE patient_id = ?";
                         No existing health record found for this patient. Do you want to create a new health record?
                     </div>
                     <div class="modal-footer">
-                    <a href="patient_profile_action/medical_history/medical_history_add.php?patient_id=<?= htmlspecialchars($patient_id) ?>" 
-                    class="btn btn-success">Yes</a>
+                        <a href="patient_profile_action/medical_history/medical_history_add.php?patient_id=<?= htmlspecialchars($patient_id) ?>"
+                            class="btn btn-success">Yes</a>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
                     </div>
                 </div>
