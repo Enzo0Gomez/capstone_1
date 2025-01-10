@@ -10,11 +10,13 @@
 
 <body>
     <style>
-        /* Vertical tabs styling */
-        .vertical-tabs {
+          /* Vertical tabs styling */
+          .vertical-tabs {
             display: flex;
             width: auto;
             min-height: 100vh;
+            background-color: #f4f4f4;
+            border-right: 1px solid #ddd;
         }
 
         .tab-link {
@@ -22,56 +24,29 @@
             align-items: center;
             justify-content: start;
             gap: 15px;
+            padding: 10px 20px;
             background-color: transparent;
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
             transition: background-color 0.3s ease, color 0.3s ease;
+            border-bottom: 1px solid #ddd;
         }
 
+        .tab-link:hover {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .tab-link.active {
+            background-color: #ddd;
+            color: #000;
+            font-weight: bold;
+        }
 
         .tab-link svg {
             flex-shrink: 0;
             /* Prevent the icon from shrinking */
-        }
-
-        .tab-menu {
-            width: 14em;
-            background-color: #FAD1E8;
-
-        }
-
-        .tab-menu button {
-            color: #000;
-            /* Light pink text */
-            padding: 0.5em;
-            transition: background 0.3s, color 0.3s;
-        }
-
-
-
-
-        @media (max-width: 768px) {
-            .tab-menu {
-                position: fixed;
-                left: -17em;
-                transition: left 0.3s ease;
-            }
-
-            .tab-menu.open {
-                left: 0;
-            }
-        }
-
-        .tab-content {
-            flex-grow: 1;
-            padding: 2rem;
-            display: flex;
-        }
-
-        .tab-content>.content {
-            flex-grow: 1;
-            /* Makes the content stretch */
         }
     </style>
 
