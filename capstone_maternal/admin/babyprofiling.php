@@ -1,8 +1,100 @@
 <?php
 include('../connect/connection.php');
-
-$sql = "SELECT baby_id, patient_ib, babyname, baby_dateB, time_delivery, deliveryType, baby_weight, baby_length FROM baby_info";
+include 'session_login.php';
+$sql = "SELECT baby_id, baby_firstname,baby_middlename ,baby_lastname, baby_dateB, time_delivery, deliveryType, baby_weight, baby_length FROM baby_info";
 $result = $connect->query($sql);
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add'])) {
+    // Use proper connection variable (assuming $conn is the correct one)
+    $search = $conn->real_escape_string($_GET['search'] ?? '');
+
+    // Retrieve patient_id based on the search query
+    $query = "SELECT id FROM patient WHERE first_name LIKE '%$search%' LIMIT 1"; // Adjust column name 'id' to match your patient table
+    $result = $conn->query($query);
+
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $patient_id = $row['id']; // Replace 'id' with the actual column name for patient_id
+    } else {
+        echo "Error: No matching patient found.";
+        exit();
+    }
+
+    // Collect baby info from POST request
+    $baby_firstname = $connect->real_escape_string($_POST['baby_firstname']);
+    $baby_middlename = $connect->real_escape_string($_POST['baby_middlename']);
+    $baby_lastname = $connect->real_escape_string($_POST['baby_lastname']);
+    $baby_dateB = $connect->real_escape_string($_POST['baby_dateB']);
+    $time_delivery = $connect->real_escape_string($_POST['time_delivery']);
+    $deliveryType = $connect->real_escape_string($_POST['deliveryType']);
+    $baby_weight = $connect->real_escape_string($_POST['baby_weight']);
+    $baby_length = $connect->real_escape_string($_POST['baby_length']);
+
+    // SQL query to insert data into baby_info, linking patient_id
+    $sql = "INSERT INTO baby_info (patient_id, baby_firstname, baby_middlename, baby_lastname, baby_dateB, time_delivery, deliveryType, baby_weight, baby_length)
+            VALUES ('$patient_id', '$baby_firstname', '$baby_middlename', '$baby_lastname', '$baby_dateB', '$time_delivery', '$deliveryType', '$baby_weight', '$baby_length')";
+
+    // Execute the query
+    if ($connect->query($sql) === TRUE) {
+        echo "New record created successfully!";
+        header("Location: babyprofiling.php");
+        exit();
+    } else {
+        echo "Error: " . $sql . "<br>" . $connect->error;
+    }
+}
+
+
+$name = isset($_POST['baby_firstname']) ? $connect->real_escape_string($_POST['baby_firstname']) : '';
+$type = isset($_POST['deliveryType']) ? $connect->real_escape_string($_POST['deliveryType']) : '';
+$date= isset($_POST['baby_dateB']) ? $connect->real_escape_string($_POST['baby_dateB']) : '';
+
+$conditions = [];
+
+if (!empty($name)) {
+    $conditions[] = "(first_name LIKE '%$name%' OR middle_name LIKE '%$name%' OR last_name LIKE '%$name%')";
+}
+
+if (!empty($type)) {
+    $conditions[] = "status = '$type'";
+}
+
+if (!empty($date)) {
+    $conditions[] = "age = '$date'";
+}
+
+$query = "SELECT * FROM baby_info WHERE 1=1"; 
+
+if (count($conditions) > 0) {
+    $query .= " AND " . implode(" AND ", $conditions);
+}
+
+$result = $connect->query($query);
+
+$name = isset($_POST['baby_firstname']) ? $connect->real_escape_string($_POST['baby_firstname']) : '';
+$type = isset($_POST['deliveryType']) ? $connect->real_escape_string($_POST['deliveryType']) : '';
+$date= isset($_POST['baby_dateB']) ? $connect->real_escape_string($_POST['baby_dateB']) : '';
+
+
+$query = "SELECT * FROM baby_info WHERE 1=1"; 
+
+if (!empty($name)) {
+    $query .= " AND (first_name LIKE '%$name%' OR middle_name LIKE '%$name%' OR last_name LIKE '%$name%')";
+}
+if (!empty($type)) {
+    $query .= " AND status = '$type'";
+}
+if (!empty($date)) {
+    $query .= " AND age = '$date'";
+}
+
+$result = $connect->query($query);
+
+function displayPatientTable($connect, $query)
+{
+    $result = $connect->query($query);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -57,7 +149,54 @@ $result = $connect->query($sql);
                             <li><a class="dropdown-item text-black px-4 py-2" href="#about">About</a></li>
                         </ul>
                     </div>
+                    <div class="relative">
+                        <button
+                            class="w-full py-2 bg-pink-300 hover:bg-pink-600 text-black font-semibold rounded-lg shadow-md transition-all duration-300"
+                            type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            Filter Patient
+                        </button>
+                        <ul class="dropdown-menu absolute right-0 mt-2 w-full md:w-72 bg-white rounded-lg shadow-lg border border-gray-200"
+                            aria-labelledby="dropdownMenuButton">
+                            <li class="p-3">
+                                <input type="text" id="nameFilter" name="name"
+                                    value="<?php echo htmlspecialchars($name); ?>"
+                                    class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                                    placeholder="Search by Name (First, Middle, Last)...">
+                            </li>
+                            <li class="p-3">
+                                <select id="statusFilter" name="ty"
+                                    class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400">
+                                    <option value="" disabled <?php echo empty($type) ? 'selected' : ''; ?>>Select Status
+                                    </option>
+                                    <option value="Normal" <?php echo $status === 'Normal' ? 'selected' : ''; ?>>Normal
+                                    </option>
+                                    <option value="Cesarean" <?php echo $status === 'Cesarean' ? 'selected' : ''; ?>>Cesarean
+                                    </option>
+                                    <option value="Assisted" <?php echo $status === 'Assisted' ? 'selected' : ''; ?>>Assisted
+                                    </option>
+                                </select>
+                            </li>
+                            <li class="p-3">
+                                <input type="number" id="dateFilter" name="baby_dateB" value="<?php echo htmlspecialchars($date); ?>"
+                                    class="w-full p-2 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                                    placeholder="Filter by Date Birthday">
+                            </li>
+                            <li class="p-3 flex justify-between">
+                                <button
+                                    class="px-2 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg shadow-md"
+                                    type="submit" name="filter">
+                                    Apply Filters
+                                </button>
+                                <button
+                                    class="px-2 py-2 bg-gray-400 hover:bg-gray-500 text-white font-semibold rounded-lg shadow-md"
+                                    type="button" onclick="clearFilters()">
+                                    Clear Filters
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
+               
             </div>
         </form>
         <div class="container mx-auto mt-8">
@@ -78,8 +217,9 @@ $result = $connect->query($sql);
                         <?php
                         if ($result->num_rows > 0) {
                             while ($row = $result->fetch_assoc()) {
+                                $baby_name = $row['baby_firstname'] . ' ' . ($row['baby_middlename'] ? $row['baby_middlename'] . ' ' : '') . $row['baby_lastname'];
                                 echo "<tr class='hover:bg-gray-50'>";
-                                echo "<td class='px-6 py-4 text-gray-700'>" . $row['babyname'] . "</td>";
+                                echo "<td class='px-6 py-4 text-gray-700'>".  $baby_name . "</td>";
                                 echo "<td class='px-6 py-4 text-gray-700'>" . $row['baby_dateB'] . "</td>";
                                 echo "<td class='px-6 py-4 text-gray-700'>" . $row['time_delivery'] . "</td>";
                                 echo "<td class='px-6 py-4 text-gray-700'>" . $row['deliveryType'] . "</td>";
@@ -119,134 +259,98 @@ $result = $connect->query($sql);
 
 
     </div>
-    <!-- Modal for Adding/Editing User -->
-    <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-pink-100">
-                    <h5 class="modal-title" id="userModalLabel">Add Baby Information</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- User Form -->
-                    <form id="userForm" class="p-6">
-                        <div class="space-y-4">
-                            <!-- Dropdown for Patient -->
-                            <div class="w-full">
-                                <div class="relative">
-                                    <label for="babyname" class="block mb-2 text-sm font-medium">Mother Name</label>
-                                    <button id="selectedPatientBtn"
-                                        class="w-full btn btn-secondary dropdown-toggle bg-pink-100 text-black border border-gray-300 py-2 px-4 rounded-md"
-                                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Select Patient
-                                    </button>
-                                    <ul class="dropdown-menu w-full bg-white shadow-lg rounded-md border border-gray-300"
-                                        id="patientDropdown">
-                                        <?php
-                                        try {
-                                            // Fetch patient names from the database
-                                            $query = "SELECT patient_id, first_name, middle_name, last_name FROM patient";
-                                            $stmt = $pdo->query($query);
+        <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: #FAD5E1;">
+                        <h5 class="modal-title" id="userModalLabel">Add Baby Information</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form -->
+                        <form id="userForm" method="POST" onsubmit="console.log('Form is submitting');">
+                            <div class="row g-3">
+                                    
+                                <div class="col-md-6 form-floating">
+                                    <input type="text" class="form-control" id="firstname" name="baby_firstname" placeholder="Baby First Name" onkeyup="searchBabyName()" required>
+                                    <label for="baby_firstname">Baby First Name</label>
+                                    <div id="search-results"></div>
+                                </div>
 
-                                            if ($stmt->rowCount() > 0) {
-                                                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                                    $fullName = htmlspecialchars($row['first_name']) . ' ' .
-                                                        (!empty($row['middle_name']) ? htmlspecialchars($row['middle_name']) . ' ' : '') .
-                                                        htmlspecialchars($row['last_name']);
-                                                    // Include patient_id as a data attribute for identification
-                                                    echo '<li><a class="dropdown-item text-black px-4 py-2 hover:bg-pink-100 cursor-pointer" href="#" data-patient-id="' . $row['patient_id'] . '" data-full-name="' . $fullName . '">' . $fullName . '</a></li>';
-                                                }
-                                            } else {
-                                                echo '<li><span class="dropdown-item text-black px-4 py-2">No patients found</span></li>';
-                                            }
-                                        } catch (PDOException $e) {
-                                            echo '<li><span class="dropdown-item text-danger text-black px-4 py-2">Error: ' . htmlspecialchars($e->getMessage()) . '</span></li>';
-                                        }
-                                        ?>
-                                    </ul>
+                                <!-- Baby First Name -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="text" class="form-control" id="baby_firstname" name="baby_firstname" placeholder="Baby First Name" required>
+                                    <label for="baby_firstname">Baby First Name</label>
+                                </div>
+                                <!-- Baby Middle Name -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="text" class="form-control" id="baby_middlename" name="baby_middlename" placeholder="Baby Middle Name">
+                                    <label for="baby_middlename">Baby Middle Name</label>
+                                </div>
+                                <!-- Baby Last Name -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="text" class="form-control" id="baby_lastname" name="baby_lastname" placeholder="Baby Last Name" required>
+                                    <label for="baby_lastname">Baby Last Name</label>
+                                </div>
+                                <!-- Date of Birth -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="date" class="form-control" id="baby_dateB" name="baby_dateB" required>
+                                    <label for="baby_dateB">Date of Birth</label>
                                 </div>
                             </div>
-                            <!-- Hidden ID for Patient -->
-                            <input type="text" id="patient_id" name="patient_id" class="hidden" value="">
-
-                            <div class="space-y-2">
-                                <label for="babyname" class="block text-sm font-medium text-gray-700">Baby Name</label>
-                                <input type="text"
-                                    class="form-input w-full py-2 px-4 rounded-md border border-gray-300 focus:ring-pink-500"
-                                    id="babyname" placeholder="Baby Name" required>
+                            <div class="mt-2 row g-3">
+                                <!-- Time of Delivery -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="time" class="form-control" id="time_delivery" name="time_delivery" required>
+                                    <label for="time_delivery">Time of Delivery</label>
+                                </div>
+                                <!-- Type of Delivery -->
+                                <div class="col-md-6 form-floating">
+                                    <select class="form-select" id="deliveryType" name="deliveryType" required>
+                                        <option selected disabled>Choose...</option>
+                                        <option value="Normal">Normal</option>
+                                        <option value="Cesarean">Cesarean</option>
+                                        <option value="Assisted">Assisted</option>
+                                    </select>
+                                    <label for="deliveryType">Type of Delivery</label>
+                                </div>
                             </div>
-
-                            <!-- Date of Birth -->
-                            <div class="space-y-2">
-                                <label for="date" class="block text-sm font-medium text-gray-700">Date of Birth</label>
-                                <input type="date"
-                                    class="form-input w-full py-2 px-4 rounded-md border border-gray-300 focus:ring-pink-500"
-                                    id="date" required>
+                            <div class="mt-2 row g-3">
+                                <!-- Birth Weight -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="number" class="form-control" id="baby_weight" name="baby_weight" placeholder="Birth Weight (kg)" step="0.01" min="0" required>
+                                    <label for="baby_weight">Birth Weight (kg)</label>
+                                </div>
+                                <!-- Birth Length -->
+                                <div class="col-md-6 form-floating">
+                                    <input type="number" class="form-control" id="baby_length" name="baby_length" placeholder="Birth Length (cm)" step="0.1" min="0" required>
+                                    <label for="baby_length">Birth Length (cm)</label>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="mt-4 space-y-4">
-                            <!-- Time of Delivery -->
-                            <div class="space-y-2">
-                                <label for="time" class="block text-sm font-medium text-gray-700">Time of
-                                    Delivery</label>
-                                <input type="time"
-                                    class="form-input w-full py-2 px-4 rounded-md border border-gray-300 focus:ring-pink-500"
-                                    id="time" required>
+                            <div class="mt-4">
+                                <!-- Save Button -->
+                                <button type="submit" name="add" class="btn w-100" style="background-color: #FAD5E1; color:#000;">Save</button>
                             </div>
-
-                            <!-- Type of Delivery -->
-                            <div class="space-y-2">
-                                <label for="deliveryType" class="block text-sm font-medium text-gray-700">Type of
-                                    Delivery</label>
-                                <select
-                                    class="form-select w-full py-2 px-4 rounded-md border border-gray-300 focus:ring-pink-500"
-                                    id="deliveryType" aria-label="Type of Delivery" required>
-                                    <option selected disabled>Choose...</option>
-                                    <option value="1">Normal</option>
-                                    <option value="2">Cesarean</option>
-                                    <option value="3">Assisted</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 space-y-4">
-                            <!-- Birth Weight -->
-                            <div class="space-y-2">
-                                <label for="weight" class="block text-sm font-medium text-gray-700">Birth Weight
-                                    (kg)</label>
-                                <input type="number" step="0.01"
-                                    class="form-input w-full py-2 px-4 rounded-md border border-gray-300 focus:ring-pink-500"
-                                    id="weight" placeholder="Birth Weight (kg)" required>
-                            </div>
-
-                            <!-- Birth Length -->
-                            <div class="space-y-2">
-                                <label for="length" class="block text-sm font-medium text-gray-700">Birth Length
-                                    (cm)</label>
-                                <input type="number" step="0.1"
-                                    class="form-input w-full py-2 px-4 rounded-md border border-gray-300 focus:ring-pink-500"
-                                    id="length" placeholder="Birth Length (cm)" required>
-                            </div>
-                        </div>
-
-                        <!-- Save Button -->
-                        <div class="mt-6">
-                            <button type="submit"
-                                class="w-full py-2 bg-pink-100 text-black font-bold rounded-md hover:bg-pink-200">
-                                Save
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        
+        // Function to clear filters
+        function clearFilters() {
+            window.location.href = "babyprofiling.php";
+            // Reset text inputs
+            document.getElementById('nameFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            document.getElementById('statusFilter').selectedIndex = 0;
+            document.getElementById('search').submit();
+        }
         // User Form Submit Handler
         document.getElementById('userForm').addEventListener('submit', function (e) {
             e.preventDefault();
@@ -265,7 +369,12 @@ $result = $connect->query($sql);
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
             modalInstance.hide();
         });
-
+        document.querySelectorAll('.tab-link').forEach(link => {
+            link.addEventListener('click', function () {
+                document.querySelector('.tab-link.active').classList.remove('active');
+                this.classList.add('active');
+            });
+        });
 
         function toggleTab(event) {
             const button = event.currentTarget; // The clicked button
@@ -282,18 +391,6 @@ $result = $connect->query($sql);
             dropdownMenu.classList.toggle('hidden');
         }
 
-
-        // Add an event listener for when a patient is selected from the dropdown
-        document.querySelectorAll('.dropdown-item').forEach(function (item) {
-            item.addEventListener('click', function () {
-                // Get the full name and patient id from the data attributes
-                var fullName = this.getAttribute('data-full-name');
-                var patientId = this.getAttribute('data-patient-id');
-
-                // Update the button text with the selected full name
-                document.getElementById('selectedPatientBtn').textContent = fullName;
-            });
-        });
         // Close the dropdown menu when clicking outside
         document.addEventListener('click', (e) => {
             document.querySelectorAll('.dropdown-menu').forEach(menu => {
@@ -314,35 +411,24 @@ $result = $connect->query($sql);
                 }
             });
         });
+            function searchBabyName() {
+            const query = document.getElementById('baby_firstname').value;
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = ''; // Clear previous results
 
-
-
-
-
-        // Select dropdown items and hidden input field
-        const patientDropdown = document.getElementById("patientDropdown");
-        const selectedPatientBtn = document.getElementById("selectedPatientBtn");
-        const patientIdInput = document.getElementById("patient_id");
-
-        // Add event listener to handle dropdown item clicks
-        patientDropdown.addEventListener("click", function (e) {
-            // Check if a dropdown item was clicked
-            if (e.target && e.target.matches("a.dropdown-item")) {
-                // Fetch patient name and ID from data attributes
-                const fullName = e.target.getAttribute("data-full-name");
-                const patientId = e.target.getAttribute("data-patient-id");
-
-                // Update the button text to the selected patient's name
-                selectedPatientBtn.textContent = fullName;
-
-                // Set the hidden input value to the selected patient_id
-                patientIdInput.value = patientId;
-
-                // Close the dropdown (if needed)
-                patientDropdown.classList.remove("show");
+            if (query.length > 0) {
+                fetch(`search.php?search=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(name => {
+                            const div = document.createElement('div');
+                            div.textContent = name;
+                            resultsDiv.appendChild(div);
+                        });
+                    })
+                    .catch(error => console.error('Error:', error));
             }
-        });
-
+        }
 
     </script>
 </body>
